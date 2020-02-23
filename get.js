@@ -3,14 +3,14 @@ const axios=require('axios');
 async function getOauthKey(){
     const result=await axios.get('https://passport.bilibili.com/qrcode/getLoginUrl')
       .then((res)=>{
+        console.log(res.data.data.url);
         return res.data.data;
       })
-      console.log(result);
     return result;
 }
 
 async function identifyKey(oauthKey){
-  console.log(oauthKey);
+  // console.log(oauthKey);
   const identify=await axios({
     url: 'https://passport.bilibili.com/qrcode/getLoginInfo',
     method: 'post',
@@ -29,27 +29,46 @@ async function identifyKey(oauthKey){
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
     }
   });
-  console.log(identify.data);
   return identify;
 }
 
-async function login(){
-  await axios.get('https://api.bilibili.com/x/web-interface/nav')
+async function getCookie(myUrl){
+  await axios.get(myUrl)
           .then(res=>
-            console.log(res.data)  
+            console.log('res:',res.data)  
           );
 }
 
+async function tryUrl(oauthKey){
+  // console.log(oauthKey);
+  let myUrl='';
+  await identifyKey(oauthKey)
+    .then((res)=>{
+      // console.log(res.data.status)
+      if(res.data.status){
+        myUrl=res.data.data.url;
+        // console.log(myUrl);
+      }else{
+        setTimeout(()=>{
+          tryUrl(oauthKey);
+        },2000);
+      }
+    });
+  return myUrl;
+}
+
+async function getMyUrl(){
+  let myUrl='';
+  await getOauthKey()
+    .then(res=>
+      tryUrl(res.oauthKey)  
+    );
+  return myUrl;
+}
+
 async function run(){
-  const oauthKey=await getOauthKey();
-  for(let i=0;i<50;i++){
-    ((i)=>{
-      setTimeout(async ()=>{
-        await identifyKey(oauthKey.oauthKey)
-          .then(login());
-      },2000*i);
-    })(i);
-  }
+  // let cookie='';
+  await getMyUrl();
 }
 
 run();
