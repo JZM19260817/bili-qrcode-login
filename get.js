@@ -10,7 +10,6 @@ async function getOauthKey(){
 }
 
 async function identifyKey(oauthKey){
-  // console.log(oauthKey);
   const identify=await axios({
     url: 'https://passport.bilibili.com/qrcode/getLoginInfo',
     method: 'post',
@@ -32,22 +31,14 @@ async function identifyKey(oauthKey){
   return identify;
 }
 
-async function getCookie(myUrl){
-  await axios.get(myUrl)
-          .then(res=>
-            console.log('res:',res.data)  
-          );
-}
-
 async function tryUrl(oauthKey){
-  // console.log(oauthKey);
+  console.log(0);
   let myUrl='';
   await identifyKey(oauthKey)
     .then((res)=>{
-      // console.log(res.data.status)
       if(res.data.status){
         myUrl=res.data.data.url;
-        // console.log(myUrl);
+        console.log(myUrl);
       }else{
         setTimeout(()=>{
           tryUrl(oauthKey);
@@ -58,17 +49,62 @@ async function tryUrl(oauthKey){
 }
 
 async function getMyUrl(){
-  let myUrl='';
-  await getOauthKey()
-    .then(res=>
-      tryUrl(res.oauthKey)  
-    );
+  const res=await getOauthKey();
+  const myUrl = await tryUrl(res.oauthKey);
   return myUrl;
 }
 
+async function getCookie(myUrl){
+  console.log('arr:',myUrl.length);
+  // console.log('myUrl:',myUrl);
+  // if(myUrl){
+  //   await axios.get(`${myUrl}`)
+  //   .then((res)=>{
+  //     cookie=res.data;
+  //     console.log('cookie:',cookie)
+  //   })
+  //   .catch(err=>console.log('err:'));
+  // }else{
+  //   setTimeout(()=>getCookie(myUrl),1000);
+  // } 
+  let cookie=''; 
+  if(myUrl.length!==1){
+    cookie=await axios({
+      url: 'https://passport.biligame.com/crossDomain',
+      method: 'get',
+      data: {
+        DedeUserID:myUrl[1],
+        DedeUserID__ckMd5:myUrl[3],
+        Expires:myUrl[5],
+        SESSDATA:myUrl[7],
+        bili_jct:myUrl[9],
+        gourl: 'https://www.bilibili.com'
+      },
+      transformRequest: [function (data) {
+        let ret = '';
+        for (let it in data) {
+          ret += encodeURIComponent(it) + '=' + encodeURIComponent(data[it]) + '&';
+        }
+        return ret;
+      }]
+    });
+  }else{
+    setTimeout(()=>{
+      getCookie(myUrl);
+    },1000);
+  }
+  return cookie;
+}
+
+async function getAllMessage(myUrl){
+  let arr=await myUrl.split(/=|&/);
+  return arr;
+}
+
 async function run(){
-  // let cookie='';
-  await getMyUrl();
+  const myUrl=await getMyUrl();
+  const arr=await getAllMessage(myUrl);
+  const cookie=await getCookie(arr);
 }
 
 run();
